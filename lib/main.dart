@@ -258,6 +258,17 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
                     controller: amountController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(labelText: 'Jumlah'),
+                    onChanged: (value) {
+                      try {
+                        double.parse(value);
+                      } catch (e) {
+                        Fluttertoast.showToast(
+                          msg: 'Mohon masukkan angka',
+                          toastLength: Toast.LENGTH_SHORT,
+                          gravity: ToastGravity.BOTTOM,
+                        );
+                      }
+                    },
                   ),
                   TextField(
                     controller: descriptionController,
@@ -354,7 +365,7 @@ class Transaction {
       'category': category,
       'amount': amount,
       'description': description,
-      'date': date.toIso8601String(),
+      'date': date.toUtc(),
     };
   }
 
@@ -366,7 +377,7 @@ class Transaction {
       category: json['category'],
       amount: json['amount'],
       description: json['description'],
-      date: DateTime.parse(json['date']),
+      date: DateTime.parse(json['date']).toLocal(),
     );
   }
 }
