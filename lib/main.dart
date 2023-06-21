@@ -37,12 +37,18 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
   ];
   String selectedCategory = '';
   TransactionType selectedType = TransactionType.income;
+  TextEditingController amountController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+  double totalIncome = 0;
+  double totalExpense = 0;
 
   @override
   void initState() {
     super.initState();
     _loadTransactions();
     selectedCategory = categories[0];
+    _calculateTotalIncome();
+    _calculateTotalExpense();
   }
 
   @override
@@ -51,60 +57,88 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
       appBar: AppBar(
         title: Text('Pencatat Keuangan'),
       ),
-      body: ListView.builder(
-        itemCount: transactions.length,
-        itemBuilder: (context, index) {
-          return Dismissible(
-            key: Key(transactions[index].date.toString()),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: EdgeInsets.only(right: 16.0),
-              child: Icon(
-                Icons.delete,
-                color: Colors.white,
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Pemasukan: $totalIncome',
+                  style: TextStyle(fontSize: 18),
+                ),
+                Text(
+                  'Total Pengeluaran: $totalExpense',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ],
             ),
-            confirmDismiss: (direction) async {
-              return await showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Konfirmasi'),
-                    content: Text(
-                        'Apakah Anda yakin ingin menghapus transaksi ini?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(false);
-                        },
-                        child: Text('Tidak'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(true);
-                        },
-                        child: Text('Ya'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-            onDismissed: (direction) {
-              _deleteTransaction(index);
-            },
-            child: ListTile(
-              leading: transactions[index].type == TransactionType.income
-                  ? Icon(Icons.add, color: Colors.green)
-                  : Icon(Icons.remove, color: Colors.red),
-              title: Text(transactions[index].category),
-              subtitle: Text(transactions[index].date.toString()),
-              trailing: Text(transactions[index].amount.toString()),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: transactions.length,
+              itemBuilder: (context, index) {
+                return Dismissible(
+                  key: Key(transactions[index].date.toString()),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(right: 16.0),
+                    child: Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                    ),
+                  ),
+                  confirmDismiss: (direction) async {
+                    return await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Konfirmasi'),
+                          content: Text(
+                              'Apakah Anda yakin ingin menghapus transaksi ini?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(false);
+                              },
+                              child: Text('Tidak'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(true);
+                              },
+                              child: Text('Ya'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  onDismissed: (direction) {
+                    _deleteTransaction(index);
+                  },
+                  child: ListTile(
+                    leading: transactions[index].type == TransactionType.income
+                        ? Icon(Icons.add, color: Colors.green)
+                        : Icon(Icons.remove, color: Colors.red),
+                    title: Text(transactions[index].category),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(transactions[index].date.toString()),
+                        Text(transactions[index].description),
+                      ],
+                    ),
+                    trailing: Text(transactions[index].amount.toString()),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -115,12 +149,38 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
     );
   }
 
+  void _calculateTotalIncome() {
+    double total = 0;
+    for (var transaction in transactions) {
+      if (transaction.type == TransactionType.income) {
+        total += transaction.amount;
+      }
+    }
+    setState(() {
+      totalIncome = total;
+    });
+  }
+
+  void _calculateTotalExpense() {
+    double total = 0;
+    for (var transaction in transactions) {
+      if (transaction.type == TransactionType.expense) {
+        total += transaction.amount;
+      }
+    }
+    setState(() {
+      totalExpense = total;
+    });
+  }
+
   void _addTransaction(Transaction transaction) {
     setState(() {
       transactions.insert(0, transaction);
     });
 
     _saveTransactions(transactions);
+    _calculateTotalIncome(); // Tambahkan ini
+    _calculateTotalExpense(); // Tambahkan ini
 
     Fluttertoast.showToast(
       msg: 'Transaksi berhasil ditambahkan!',
@@ -135,6 +195,8 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
     });
 
     _saveTransactions(transactions);
+    _calculateTotalIncome(); // Tambahkan ini
+    _calculateTotalExpense(); // Tambahkan ini
 
     Fluttertoast.showToast(
       msg: 'Transaksi berhasil dihapus!',
@@ -147,82 +209,99 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        TextEditingController amountController = TextEditingController();
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: Text('Tambah Transaksi'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    title: Text('Pemasukan'),
+                    leading: Radio(
+                      value: TransactionType.income,
+                      groupValue: selectedType,
+                      onChanged: (TransactionType? value) {
+                        setState(() {
+                          selectedType = value!;
+                        });
+                      },
+                    ),
+                  ),
+                  ListTile(
+                    title: Text('Pengeluaran'),
+                    leading: Radio(
+                      value: TransactionType.expense,
+                      groupValue: selectedType,
+                      onChanged: (TransactionType? value) {
+                        setState(() {
+                          selectedType = value!;
+                        });
+                      },
+                    ),
+                  ),
+                  DropdownButton<String>(
+                    value: selectedCategory,
+                    onChanged: (String? value) {
+                      setState(() {
+                        selectedCategory = value!;
+                      });
+                    },
+                    items: categories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                  ),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: 'Jumlah'),
+                  ),
+                  TextField(
+                    controller: descriptionController,
+                    keyboardType: TextInputType.text,
+                    decoration: InputDecoration(labelText: 'Deskripsi'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (amountController.text.isNotEmpty) {
+                      final amount = double.parse(amountController.text);
+                      final transaction = Transaction(
+                        type: selectedType,
+                        category: selectedCategory,
+                        amount: amount,
+                        description: descriptionController.text,
+                        date: DateTime.now(),
+                      );
+                      _addTransaction(transaction);
 
-        return AlertDialog(
-          title: Text('Tambah Transaksi'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text('Pemasukan'),
-                leading: Radio(
-                  value: TransactionType.income,
-                  groupValue: selectedType,
-                  onChanged: (TransactionType? value) {
-                    setState(() {
-                      selectedType = value!;
-                    });
+                      // Mengatur kembali nilai-nilai setelah menyimpan transaksi
+                      setState(() {
+                        selectedType = TransactionType.income;
+                        selectedCategory = categories[0];
+                        amountController.clear();
+                        descriptionController.clear();
+                      });
+
+                      Navigator.pop(context);
+                    }
                   },
+                  child: Text('Simpan'),
                 ),
-              ),
-              ListTile(
-                title: Text('Pengeluaran'),
-                leading: Radio(
-                  value: TransactionType.expense,
-                  groupValue: selectedType,
-                  onChanged: (TransactionType? value) {
-                    setState(() {
-                      selectedType = value!;
-                    });
-                  },
-                ),
-              ),
-              DropdownButton<String>(
-                value: selectedCategory,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedCategory = newValue!;
-                  });
-                },
-                items: categories.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              TextField(
-                controller: amountController,
-                decoration: InputDecoration(labelText: 'Jumlah'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (amountController.text.isNotEmpty) {
-                  final amount = double.parse(amountController.text);
-                  final transaction = Transaction(
-                    type: selectedType,
-                    category: selectedCategory,
-                    amount: amount,
-                    date: DateTime.now(),
-                  );
-                  _addTransaction(transaction);
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Simpan'),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
@@ -246,6 +325,8 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
       setState(() {
         transactions = loadedTransactions;
       });
+      _calculateTotalIncome(); // Tambahkan ini
+      _calculateTotalExpense(); // Tambahkan ini
     }
   }
 }
@@ -256,12 +337,14 @@ class Transaction {
   final TransactionType type;
   final String category;
   final double amount;
+  final String description;
   final DateTime date;
 
   Transaction({
     required this.type,
     required this.category,
     required this.amount,
+    required this.description,
     required this.date,
   });
 
@@ -270,6 +353,7 @@ class Transaction {
       'type': type == TransactionType.income ? 'income' : 'expense',
       'category': category,
       'amount': amount,
+      'description': description,
       'date': date.toIso8601String(),
     };
   }
@@ -281,6 +365,7 @@ class Transaction {
           : TransactionType.expense,
       category: json['category'],
       amount: json['amount'],
+      description: json['description'],
       date: DateTime.parse(json['date']),
     );
   }
