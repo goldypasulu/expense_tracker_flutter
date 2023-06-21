@@ -36,6 +36,7 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
     'Lainnya',
   ];
   String selectedCategory = '';
+  TransactionType selectedType = TransactionType.income;
 
   @override
   void initState() {
@@ -114,6 +115,20 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
     );
   }
 
+  void _addTransaction(Transaction transaction) {
+    setState(() {
+      transactions.insert(0, transaction);
+    });
+
+    _saveTransactions(transactions);
+
+    Fluttertoast.showToast(
+      msg: 'Transaksi berhasil ditambahkan!',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+  }
+
   void _deleteTransaction(int index) {
     setState(() {
       transactions.removeAt(index);
@@ -134,83 +149,80 @@ class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
       builder: (BuildContext context) {
         TextEditingController amountController = TextEditingController();
 
-        String selectedCategory =
-            categories[0]; // Inisialisasi dengan kategori pertama
-
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: Text('Tambah Transaksi'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButton<String>(
-                    value: selectedCategory,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedCategory = newValue!;
-                      });
-                    },
-                    items: categories
-                        .map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                  ),
-                  TextField(
-                    controller: amountController,
-                    decoration: InputDecoration(labelText: 'Jumlah'),
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
+        return AlertDialog(
+          title: Text('Tambah Transaksi'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Pemasukan'),
+                leading: Radio(
+                  value: TransactionType.income,
+                  groupValue: selectedType,
+                  onChanged: (TransactionType? value) {
+                    setState(() {
+                      selectedType = value!;
+                    });
+                  },
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
+              ListTile(
+                title: Text('Pengeluaran'),
+                leading: Radio(
+                  value: TransactionType.expense,
+                  groupValue: selectedType,
+                  onChanged: (TransactionType? value) {
+                    setState(() {
+                      selectedType = value!;
+                    });
                   },
-                  child: Text('Batal'),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (amountController.text.isNotEmpty) {
-                      final amount = double.parse(amountController.text);
-
-                      setState(() {
-                        transactions.add(
-                          Transaction(
-                            type: TransactionType.expense,
-                            category: selectedCategory,
-                            amount: amount,
-                            date: DateTime.now(),
-                          ),
-                        );
-                      });
-
-                      _saveTransactions(transactions);
-
-                      Fluttertoast.showToast(
-                        msg: 'Transaksi berhasil ditambahkan!',
-                        toastLength: Toast.LENGTH_SHORT,
-                        gravity: ToastGravity.BOTTOM,
-                      );
-
-                      Navigator.pop(context);
-                    } else {
-                      Fluttertoast.showToast(
-                        msg: 'Mohon isi semua field!',
-                        toastLength: Toast.LENGTH_SHORT,
-                        gravity: ToastGravity.BOTTOM,
-                      );
-                    }
-                  },
-                  child: const Text('Simpan'),
-                ),
-              ],
-            );
-          },
+              ),
+              DropdownButton<String>(
+                value: selectedCategory,
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedCategory = newValue!;
+                  });
+                },
+                items: categories.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+              TextField(
+                controller: amountController,
+                decoration: InputDecoration(labelText: 'Jumlah'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (amountController.text.isNotEmpty) {
+                  final amount = double.parse(amountController.text);
+                  final transaction = Transaction(
+                    type: selectedType,
+                    category: selectedCategory,
+                    amount: amount,
+                    date: DateTime.now(),
+                  );
+                  _addTransaction(transaction);
+                  Navigator.pop(context);
+                }
+              },
+              child: Text('Simpan'),
+            ),
+          ],
         );
       },
     );
