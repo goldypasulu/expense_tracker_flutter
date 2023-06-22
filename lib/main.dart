@@ -1,287 +1,37 @@
+import 'pages/login_page.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 void main() {
-  runApp(PencatatKeuanganApp());
+  runApp(MyApp());
 }
 
-class PencatatKeuanganApp extends StatelessWidget {
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pencatat Keuangan',
+      title: 'Flutter Authentication',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        brightness: Brightness.light,
         primarySwatch: Colors.blue,
-      ),
-      home: PencatatKeuanganPage(),
-    );
-  }
-}
-
-class PencatatKeuanganPage extends StatefulWidget {
-  @override
-  _PencatatKeuanganPageState createState() => _PencatatKeuanganPageState();
-}
-
-class _PencatatKeuanganPageState extends State<PencatatKeuanganPage> {
-  List<Transaction> transactions = [];
-  List<String> categories = [
-    'Makanan',
-    'Transportasi',
-    'Belanja',
-    'Hiburan',
-    'Tagihan',
-    'Lainnya',
-  ];
-  String selectedCategory = '';
-  TransactionType selectedType = TransactionType.income;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTransactions();
-    selectedCategory = categories[0];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Pencatat Keuangan'),
-      ),
-      body: ListView.builder(
-        itemCount: transactions.length,
-        itemBuilder: (context, index) {
-          return Dismissible(
-            key: Key(transactions[index].date.toString()),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: EdgeInsets.only(right: 16.0),
-              child: Icon(
-                Icons.delete,
-                color: Colors.white,
-              ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            textStyle: TextStyle(
+              fontSize: 24.0,
             ),
-            confirmDismiss: (direction) async {
-              return await showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Konfirmasi'),
-                    content: Text(
-                        'Apakah Anda yakin ingin menghapus transaksi ini?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(false);
-                        },
-                        child: Text('Tidak'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(true);
-                        },
-                        child: Text('Ya'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-            onDismissed: (direction) {
-              _deleteTransaction(index);
-            },
-            child: ListTile(
-              leading: transactions[index].type == TransactionType.income
-                  ? Icon(Icons.add, color: Colors.green)
-                  : Icon(Icons.remove, color: Colors.red),
-              title: Text(transactions[index].category),
-              subtitle: Text(transactions[index].date.toString()),
-              trailing: Text(transactions[index].amount.toString()),
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _openAddTransactionDialog();
-        },
-        child: Icon(Icons.add),
-      ),
-    );
-  }
-
-  void _addTransaction(Transaction transaction) {
-    setState(() {
-      transactions.insert(0, transaction);
-    });
-
-    _saveTransactions(transactions);
-
-    Fluttertoast.showToast(
-      msg: 'Transaksi berhasil ditambahkan!',
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-    );
-  }
-
-  void _deleteTransaction(int index) {
-    setState(() {
-      transactions.removeAt(index);
-    });
-
-    _saveTransactions(transactions);
-
-    Fluttertoast.showToast(
-      msg: 'Transaksi berhasil dihapus!',
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-    );
-  }
-
-  void _openAddTransactionDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        TextEditingController amountController = TextEditingController();
-
-        return AlertDialog(
-          title: Text('Tambah Transaksi'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text('Pemasukan'),
-                leading: Radio(
-                  value: TransactionType.income,
-                  groupValue: selectedType,
-                  onChanged: (TransactionType? value) {
-                    setState(() {
-                      selectedType = value!;
-                    });
-                  },
-                ),
-              ),
-              ListTile(
-                title: Text('Pengeluaran'),
-                leading: Radio(
-                  value: TransactionType.expense,
-                  groupValue: selectedType,
-                  onChanged: (TransactionType? value) {
-                    setState(() {
-                      selectedType = value!;
-                    });
-                  },
-                ),
-              ),
-              DropdownButton<String>(
-                value: selectedCategory,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedCategory = newValue!;
-                  });
-                },
-                items: categories.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              TextField(
-                controller: amountController,
-                decoration: InputDecoration(labelText: 'Jumlah'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+            padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 8.0),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (amountController.text.isNotEmpty) {
-                  final amount = double.parse(amountController.text);
-                  final transaction = Transaction(
-                    type: selectedType,
-                    category: selectedCategory,
-                    amount: amount,
-                    date: DateTime.now(),
-                  );
-                  _addTransaction(transaction);
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Simpan'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _saveTransactions(List<Transaction> transactions) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> encodedTransactions = transactions
-        .map((transaction) => jsonEncode(transaction.toJson()))
-        .toList();
-    await prefs.setStringList('transactions', encodedTransactions);
-  }
-
-  Future<void> _loadTransactions() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? encodedTransactions = prefs.getStringList('transactions');
-    if (encodedTransactions != null) {
-      List<Transaction> loadedTransactions = encodedTransactions
-          .map((encoded) => Transaction.fromJson(jsonDecode(encoded)))
-          .toList();
-      setState(() {
-        transactions = loadedTransactions;
-      });
-    }
-  }
-}
-
-enum TransactionType { income, expense }
-
-class Transaction {
-  final TransactionType type;
-  final String category;
-  final double amount;
-  final DateTime date;
-
-  Transaction({
-    required this.type,
-    required this.category,
-    required this.amount,
-    required this.date,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'type': type == TransactionType.income ? 'income' : 'expense',
-      'category': category,
-      'amount': amount,
-      'date': date.toIso8601String(),
-    };
-  }
-
-  factory Transaction.fromJson(Map<String, dynamic> json) {
-    return Transaction(
-      type: json['type'] == 'income'
-          ? TransactionType.income
-          : TransactionType.expense,
-      category: json['category'],
-      amount: json['amount'],
-      date: DateTime.parse(json['date']),
+        ),
+        textTheme: TextTheme(
+          headline1: TextStyle(
+            fontSize: 46.0,
+            color: Colors.blue.shade700,
+            fontWeight: FontWeight.w500,
+          ),
+          bodyText1: TextStyle(fontSize: 18.0),
+        ),
+      ),
+      home: LoginPage(),
     );
   }
 }
